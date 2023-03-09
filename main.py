@@ -1,4 +1,4 @@
-def ota_update(path, file)
+def ota_update(path, file):
 
     # Download
     full_url = path + "/" + file
@@ -17,8 +17,9 @@ def ota_update(path, file)
     restart_and_reconnect()        
 
 def send_mqtt_message(client, topic, msg):
-    print("Publishing topic:%s message:%s" % (topic,msg))
-    client.publish(topic,msg)
+    json = ujson.dumps(msg)
+    print("Publishing topic:%s message:%s" % (topic,json))
+    client.publish(topic,json)
     
 def subscribe_to(client, topic):
     print("Subscribing to topic: "+topic)
@@ -26,14 +27,17 @@ def subscribe_to(client, topic):
     
 def subscribe_callback(topic, msg):
     print("Received topic:%s message:%s" % (topic, msg))
-    json_doc = json.loads(msg)
+    json_doc = ujson.loads(msg)
     
-    if json_doc["command"] == "switch:on":
+    if not "command" in json_doc:
+        pass
+    elif json_doc["command"] == "switch:on":
         gpio_12_relay.value(1)
     elif json_doc["command"] == "switch:off":
         gpio_12_relay.value(0)
     elif json_doc["command"] == "?status":
-        client.publish(device_group, device_name + ':status:' + str(gpio_12_relay.value()))
+        data = {"device": device_name, "status": "on" if gpio_12_relay.value() == 0 else "off"}       
+        send_mqtt_message(device_group, data)
     elif json_doc["command"] == "reboot":
         machine.reset()
     elif json_doc["command"] == "update":
@@ -65,7 +69,8 @@ try:
     print("MAC-Address..: " + wlan_mac_address)    
     print("MQTT-Broker..: " + mqtt_server)
     print("Device name..: " + device_name)
-    send_mqtt_message(client, device_group, device_name + ":booted:" + version)      
+    data = {"device": device_name, "status": "booted"}       
+    send_mqtt_message(client, device_group, data)      
     print("Started!")
 except OSError as e:
     restart_and_reconnect()
@@ -82,7 +87,8 @@ while True:
     # Alive
     counter += 1
     if(counter > 60*30):
-        send_mqtt_message(client, device_group, device_name + ":alive")
+        data = {"device": device_name, "status": "alive"}               
+        send_mqtt_message(client, device_group, data)
         counter = 0
     
   except OSError as e:

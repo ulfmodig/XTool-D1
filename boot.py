@@ -11,7 +11,7 @@
 # Complete project details at https://RandomNerdTutorials.com
 
 import time
-from umqttsimple import MQTTClient
+from umqtt.simple import MQTTClient
 import ubinascii
 import machine
 import micropython
@@ -19,7 +19,7 @@ import network
 import esp
 import urequests
 import os
-import json
+import ujson
 esp.osdebug(None)
 import gc
 gc.collect()
