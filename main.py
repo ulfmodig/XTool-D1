@@ -1,17 +1,27 @@
-def ota_update(path, file):
+#  mosquitto_pub -t "home/xtool-D1" -m '{"command": "update", "path": "https://raw.githubusercontent.com/ulfmodig/XTool-D1/master", "file": "test.txt"}'
+def ota_update(path, filename):
 
+    # Auth
+    full_url = path + "/" + filename    
+    headers = {
+        "Authorization": "Basic " + ubinascii.b2a_base64(bytes(github_user + ":" + github_password, "utf-8")).decode("ascii"),
+        "User-Agent": "micropython"
+    }
+    
     # Download
-    full_url = path + "/" + file
     print("Downloading: " + full_url)    
-    response = urequests.get(full_url, auth=(github_user, github_password))
+    response = urequests.get(full_url, headers=headers)
     with open('update.bin', 'wb') as file:
         file.write(response.content)
         
     # Update
-    print("Updating: " + file)        
-    if(os.path.isfile(file)):
-        os.remove(file)
-    os.rename("update.bin", file)
+    print("Updating: " + filename)        
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+    os.rename("update.bin", filename)
+    send_mqtt_message(client, device_group, {"device": device_name, "status": "alive"})    
     
     # Restart
     restart_and_reconnect()        
