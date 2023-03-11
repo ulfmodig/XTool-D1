@@ -12,7 +12,7 @@ def ota_update(path, filename):
     print("Updating: " + filename)        
     try:
         os.remove(filename)
-    except OSError:
+    except:
         pass
     os.rename("update.bin", filename)
     send_mqtt_message(client, device_group, {"device": device_name, "status": "updated"})    
@@ -31,7 +31,11 @@ def subscribe_to(client, topic):
     
 def subscribe_callback(topic, msg):
     print("Received topic:%s message:%s" % (topic, msg))
-    json_doc = ujson.loads(msg)
+    try:
+        json_doc = ujson.loads(msg)
+    except:
+        print("Bad JSON")
+        return        
     
     if not "command" in json_doc:
         pass
@@ -63,7 +67,7 @@ def restart_and_reconnect():
 devices = {'4cebd6acefc1': 'home/xtool-D1/laser','4cebd6ae22fd': 'home/xtool-D1/air','4cebd6ae2296': 'home/xtool-D1/smoke','4cebd6ae233d': 'home/xtool-D1/enclosure'}
 device_name = devices[wlan_mac_address]
 device_group = 'home/xtool-D1'
-version = "1.01"
+version = "1.02"
 
 try:
     print("Starting up...")
