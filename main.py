@@ -1,16 +1,10 @@
 #  mosquitto_pub -t "home/xtool-D1" -m '{"command": "update", "path": "https://raw.githubusercontent.com/ulfmodig/XTool-D1/master", "file": "test.txt"}'
 def ota_update(path, filename):
 
-    # Auth
-    full_url = path + "/" + filename    
-    headers = {
-        "Authorization": "Basic " + ubinascii.b2a_base64(bytes(github_user + ":" + github_password, "utf-8")).decode("ascii"),
-        "User-Agent": "micropython"
-    }
-    
     # Download
+    full_url = path + "/" + filename       
     print("Downloading: " + full_url)    
-    response = urequests.get(full_url, headers=headers)
+    response = urequests.get(full_url)
     with open('update.bin', 'wb') as file:
         file.write(response.content)
         
@@ -21,7 +15,7 @@ def ota_update(path, filename):
     except OSError:
         pass
     os.rename("update.bin", filename)
-    send_mqtt_message(client, device_group, {"device": device_name, "status": "alive"})    
+    send_mqtt_message(client, device_group, {"device": device_name, "status": "updated"})    
     
     # Restart
     restart_and_reconnect()        
@@ -46,7 +40,7 @@ def subscribe_callback(topic, msg):
     elif json_doc["command"] == "switch:off":
         gpio_12_relay.value(0)
     elif json_doc["command"] == "?status":
-        data = {"device": device_name, "status": "on" if gpio_12_relay.value() == 0 else "off"}       
+        data = {"device": device_name, "version": version, "status": "on" if gpio_12_relay.value() == 0 else "off"}       
         send_mqtt_message(device_group, data)
     elif json_doc["command"] == "reboot":
         machine.reset()
@@ -79,7 +73,7 @@ try:
     print("MAC-Address..: " + wlan_mac_address)    
     print("MQTT-Broker..: " + mqtt_server)
     print("Device name..: " + device_name)
-    data = {"device": device_name, "status": "booted"}       
+    data = {"device": device_name, "status": "booted", "version": version}       
     send_mqtt_message(client, device_group, data)      
     print("Started!")
 except OSError as e:

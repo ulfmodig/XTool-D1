@@ -4,8 +4,8 @@
 #old: import uos, machine
 #uos.dupterm(None, 1) # disable REPL on UART(0)
 #old: import gc
-#import webrepl
-#webrepl.start()
+import webrepl
+webrepl.start()
 #old: gc.collect()
 
 # Complete project details at https://RandomNerdTutorials.com
