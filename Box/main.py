@@ -98,7 +98,7 @@ while True:
     try:
 
         # Check message and blink
-        client.check_msg()
+        mqtt_client.check_msg()
         time.sleep(1)
         gpio_13_led.value(1) if gpio_13_led.value() == 0 else gpio_13_led.value(0)
 
