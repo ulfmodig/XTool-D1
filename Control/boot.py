@@ -5,7 +5,6 @@
 # uos.dupterm(None, 1) # disable REPL on UART(0)
 # old: import gc
 import webrepl
-
 webrepl.start()
 # old: gc.collect()
 
@@ -17,14 +16,11 @@ import ubinascii
 import machine
 import micropython
 import network
-import esp
 import urequests
 import os
 import ujson
 
-esp.osdebug(None)
 import gc
-
 gc.collect()
 
 # Network
