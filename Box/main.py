@@ -1,4 +1,4 @@
-#  mosquitto_pub -t "home/xtool-D1" -m '{"command": "update", "path": "https://raw.githubusercontent.com/ulfmodig/XTool-D1/master", "file": "test.txt"}'
+#  mosquitto_pub -t "home/xtool-D1/test" -m '{\"command\": \"update\", "\path\": \"https://raw.githubusercontent.com/ulfmodig/XTool-D1/master\", \"file\": \"main.py\"}'
 #  mosquitto_pub -t "home/xtool-D1/test" -h "192.168.1.90" -m '{\"type\": \"xtool-D1\", \"command\": \"reboot\"}'
 def ota_update(path, filename):
     # Download
