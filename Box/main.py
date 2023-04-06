@@ -73,7 +73,6 @@ def connect_and_subscribe():
 def restart_and_reconnect():
     print('Reconnecting...')
     gpio_12_relay.value(0)
-    send_command("status")
     time.sleep(10)
     machine.reset()
 
@@ -83,7 +82,7 @@ devices = {'4cebd6acefc1': 'home/xtool-D1/laser', '4cebd6ae22fd': 'home/xtool-D1
            '4cebd6ae2201': 'home/xtool-D1/test'}
 device_name = devices[wlan_mac_address]
 device_group = 'home/xtool-D1'
-version = "1.04"
+version = "1.05"
 
 try:
     print("Starting up...")
@@ -95,7 +94,7 @@ try:
     print("Device name..: " + device_name)
     send_command("booted")
     print("Started!")
-except OSError as e:
+except:
     restart_and_reconnect()
 
 counter = 0
@@ -113,5 +112,5 @@ while True:
             send_command("alive")
             counter = 0
 
-    except OSError as e:
+    except:
         restart_and_reconnect()
