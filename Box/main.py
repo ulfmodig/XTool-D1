@@ -1,36 +1,13 @@
-#  mosquitto_pub -t "home/xtool-D1/test" -m '{\"command\": \"update\", "\path\": \"https://raw.githubusercontent.com/ulfmodig/XTool-D1/master\", \"file\": \"main.py\"}'
-#  mosquitto_pub -t "home/xtool-D1/test" -h "192.168.1.90" -m '{\"type\": \"xtool-D1\", \"command\": \"reboot\"}'
-def ota_update(path, filename):
-    # Download
-    full_url = path + "/" + filename
-    print("Downloading: " + full_url)
-    response = urequests.get(full_url)
-    with open('update.bin', 'wb') as file:
-        file.write(response.content)
-
-    # Update
-    print("Updating: " + filename)
-    try:
-        os.remove(filename)
-    except:
-        pass
-    os.rename("update.bin", filename)
-    send_command("updated")
-
-    # Restart
-    restart_and_reconnect()
-
-def send_command(command):
+def send_command(topic, command):
     global mqtt_client, device_group, device_name, version
-    json = ujson.dumps({"type": "xtool-D1", "device": device_name, "version": version, "command": command,"status": "on" if gpio_12_relay.value() == 1 else "off"})    
-    print("Publishing topic:%s message:%s" % (device_group, json))
-    mqtt_client.publish(device_group, json)
+    json = ujson.dumps({"type": "xtool-D1", "device": device_name, "version": version, "command": command})    
+    print("Publishing topic:%s message:%s" % (topic, json))
+    mqtt_client.publish(topic, json)
 
 def subscribe_to(topic):
     global mqtt_client
     print("Subscribing to topic: " + topic)
     mqtt_client.subscribe(topic)
-
 
 def subscribe_callback(topic, msg):
     print("Received topic:%s message:%s" % (topic, msg))
@@ -40,31 +17,37 @@ def subscribe_callback(topic, msg):
         print("Bad JSON")
         return
 
-    if not "type" in json_doc:
-        print("Ignored, no 'type'!")
-    elif not json_doc["type"] == "xtool-D1":
-        print("Ignored, bad type; " + json_doc["type"])
-    elif not "command" in json_doc:
-        print("Ignored, missing 'command'!")
-    elif json_doc["command"] == "switch:on":
-        gpio_12_relay.value(1)
-        send_command("status")        
-    elif json_doc["command"] == "switch:off":
-        gpio_12_relay.value(0)
-        send_command("status")        
-    elif json_doc["command"] == "?status":
-        send_command("status")
-    elif json_doc["command"] == "reboot":
-        machine.reset()
-    elif json_doc["command"] == "update":
-        ota_update(json_doc["path"], json_doc["file"])
+    if not "type" in json_doc or not json_doc["type"] == "xtool-D1":
+        print("Ignored, bad type!")
+    elif not "status" in json_doc:
+        print("Ignored, no status found!")
     else:
-        print("Ignored, unsupported command; " + json_doc["command"])        
+        if json_doc["device"] == "home/xtool-D1/laser":
+            gpio_led_red.value(1) if json_doc["status"] == "on" else gpio_led_red.value(0)
+        elif json_doc["device"] == "home/xtool-D1/air":
+            gpio_led_blue.value(1) if json_doc["status"] == "on" else gpio_led_blue.value(0)
+        elif json_doc["device"] == "home/xtool-D1/smoke":
+            gpio_led_yellow.value(1) if json_doc["status"] == "on" else gpio_led_yellow.value(0)
+        elif json_doc["device"] == "home/xtool-D1/enclosure":
+            gpio_led_green.value(1) if json_doc["status"] == "on" else gpio_led_green.value(0)
 
+def button_pressed_callback(pin):
+    if pin == gpio_button_red:
+        send_command("home/xtool-D1/laser", "switch:off" if gpio_led_red.value() == 1 else "switch:on")
+    elif pin == gpio_button_blue:
+        send_command("home/xtool-D1/air", "switch:off" if gpio_led_blue.value() == 1 else "switch:on")
+    elif pin == gpio_button_yellow:
+        send_command("home/xtool-D1/smoke", "switch:off" if gpio_led_yellow.value() == 1 else "switch:on")
+    elif pin == gpio_button_green:
+        send_command("home/xtool-D1/enclosure", "switch:off" if gpio_led_green.value() == 1 else "switch:on")
+    elif pin == gpio_button_white:
+        send_command("home/xtool-D1", "switch:on")
+    elif pin == gpio_button_black:
+        send_command("home/xtool-D1", "switch:off")
 
 def connect_and_subscribe():
     global mqtt_client
-    mqtt_client = MQTTClient(device_name, mqtt_server)
+    mqtt_client = MQTTClient(client_id=device_name, server=mqtt_server, user=mqtt_user, password=mqtt_password)
     mqtt_client.connect()
     mqtt_client.set_callback(subscribe_callback)
     subscribe_to(device_name)
@@ -72,45 +55,49 @@ def connect_and_subscribe():
 
 def restart_and_reconnect():
     print('Reconnecting...')
-    gpio_12_relay.value(0)
     time.sleep(10)
     machine.reset()
 
-
-devices = {'4cebd6acefc1': 'home/xtool-D1/laser', '4cebd6ae22fd': 'home/xtool-D1/air',
-           '4cebd6ae2296': 'home/xtool-D1/smoke', '4cebd6ae233d': 'home/xtool-D1/enclosure',
-           '4cebd6ae2201': 'home/xtool-D1/test'}
-device_name = devices[wlan_mac_address]
+device_name = "home/xtool-D1/control"
 device_group = 'home/xtool-D1'
-version = "1.05"
+version = "1.00"
 
 try:
     print("Starting up...")
+    gpio_led_red.value(0)
+    gpio_led_blue.value(0)
+    gpio_led_yellow.value(0)
+    gpio_led_green.value(0)
+    
+    gpio_button_red.irq(trigger = machine.Pin.IRQ_RISING, handler=button_pressed_callback)
+    gpio_button_blue.irq(trigger = machine.Pin.IRQ_RISING, handler=button_pressed_callback)
+    gpio_button_yellow.irq(trigger = machine.Pin.IRQ_RISING, handler=button_pressed_callback)
+    gpio_button_green.irq(trigger = machine.Pin.IRQ_RISING, handler=button_pressed_callback)
+    gpio_button_white.irq(trigger = machine.Pin.IRQ_RISING, handler=button_pressed_callback)
+    gpio_button_black.irq(trigger = machine.Pin.IRQ_RISING, handler=button_pressed_callback)
+    
     connect_and_subscribe()
+    
     print("Version......: " + version)
     print("IP-Address...: " + wlan_ip_address)
     print("MAC-Address..: " + wlan_mac_address)
     print("MQTT-Broker..: " + mqtt_server)
     print("Device name..: " + device_name)
-    send_command("booted")
+    send_command(device_group, "booted")
+    send_command(device_group, "?status")
+       
     print("Started!")
-except:
+except OSError as e:
     restart_and_reconnect()
 
-counter = 0
 while True:
     try:
 
-        # Check message and blink
+        # Check message 
         mqtt_client.check_msg()
-        time.sleep(1)
-        gpio_13_led.value(1) if gpio_13_led.value() == 0 else gpio_13_led.value(0)
-
-        # Alive
-        counter += 1
-        if (counter > 60 * 30):
-            send_command("alive")
-            counter = 0
-
-    except:
+        
+        # Slow down
+        time.sleep_ms(1000) 
+        
+    except OSError as e:
         restart_and_reconnect()
