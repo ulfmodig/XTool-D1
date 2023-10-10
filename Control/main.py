@@ -40,14 +40,14 @@ def button_pressed_callback(pin):
         send_command("home/xtool-D1/smoke", "switch:off" if gpio_led_yellow.value() == 1 else "switch:on")
     elif pin == gpio_button_green:
         send_command("home/xtool-D1/enclosure", "switch:off" if gpio_led_green.value() == 1 else "switch:on")
-    elif pin == gpio_button_while:
+    elif pin == gpio_button_white:
         send_command("home/xtool-D1", "switch:on")
-    elif pin == gpio_button_red:
+    elif pin == gpio_button_black:
         send_command("home/xtool-D1", "switch:off")
 
 def connect_and_subscribe():
     global mqtt_client
-    mqtt_client = MQTTClient(device_name, mqtt_server)
+    mqtt_client = MQTTClient(client_id=device_name, server=mqtt_server, user=mqtt_user, password=mqtt_password)
     mqtt_client.connect()
     mqtt_client.set_callback(subscribe_callback)
     subscribe_to(device_name)
