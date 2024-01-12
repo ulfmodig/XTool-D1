@@ -39,6 +39,10 @@ mqtt_server = '192.168.1.90'
 mqtt_user = 'user'
 mqtt_password = 'Dido88bole'
 
+# Interrupts
+debounce_time = 200 
+last_interrupt_time = 0
+
 # GPIO
 gpio_button_red = machine.Pin(10, machine.Pin.IN, machine.Pin.PULL_UP)
 gpio_button_blue = machine.Pin(11, machine.Pin.IN, machine.Pin.PULL_UP)
